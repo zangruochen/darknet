@@ -12,6 +12,19 @@
 #include <omp.h>
 #endif
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+#include "xyolov4_tiny.h"
+extern XYolov4_tiny yolov4_tiny;
+extern float * tmp_A;
+extern float * tmp_B;
+extern float * tmp_C;
+
 #if defined(_MSC_VER)
 #if defined(_M_ARM) || defined(_M_ARM64)
 static inline uint32_t popcnt(uint32_t v) {
@@ -2652,18 +2665,33 @@ void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
         gemm_nn_fast(M, N, K, ALPHA, A, lda, B, ldb, C, ldc);
     }
     else {
-        int t;
+#ifndef USE_FPGA
+        int m, n, k;
         #pragma omp parallel for
-        for (t = 0; t < M; ++t) {
-            if (!TA && !TB)
-                gemm_nn(1, N, K, ALPHA, A + t*lda, lda, B, ldb, C + t*ldc, ldc);
-            else if (TA && !TB)
-                gemm_tn(1, N, K, ALPHA, A + t, lda, B, ldb, C + t*ldc, ldc);
-            else if (!TA && TB)
-                gemm_nt(1, N, K, ALPHA, A + t*lda, lda, B, ldb, C + t*ldc, ldc);
-            else
-                gemm_tt(1, N, K, ALPHA, A + t, lda, B, ldb, C + t*ldc, ldc);
+        for (m = 0; m < M; ++m) {
+            for (k = 0; k < K; ++k) {
+                PUT_IN_REGISTER float A_PART = ALPHA * A[m * K + k];
+                for (n = 0; n < N; ++n) {
+                    C[m * N + n] += A_PART * B[k * N + n];
+                }
+            }
         }
+#else
+	/*
+	 * start FPGA
+	 */
+	XYolov4_tiny_Set_A(&yolov4_tiny, 0x1e000000);
+	XYolov4_tiny_Set_B(&yolov4_tiny, 0x20000000);
+	XYolov4_tiny_Set_C(&yolov4_tiny, 0x22000000);
+	XYolov4_tiny_Set_M(&yolov4_tiny, M);
+	XYolov4_tiny_Set_N(&yolov4_tiny, N);
+	XYolov4_tiny_Set_K(&yolov4_tiny, K);
+	XYolov4_tiny_Start(&yolov4_tiny);
+	while(!XYolov4_tiny_IsDone(&yolov4_tiny));
+	memcpy(A, tmp_A, M*K*4);
+	memcpy(B, tmp_B, N*K*4);
+	memcpy(C, tmp_C, M*N*4);
+#endif
     }
 }
 

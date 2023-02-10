@@ -19,6 +19,22 @@ typedef __compar_fn_t comparison_fn_t;
 
 #include "http_stream.h"
 
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include "xyolov4_tiny.h"
+int devmem;
+XYolov4_tiny yolov4_tiny;
+float *tmp_A;
+float *tmp_B;
+float *tmp_C;
+
 int check_mistakes = 0;
 
 static int coco_ids[] = { 1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90 };
@@ -2027,6 +2043,15 @@ void run_detector(int argc, char **argv)
     }
 
     int clear = find_arg(argc, argv, "-clear");
+
+    /*
+     *Init FPGA and open /dev/mem
+     */
+    devmem = open("/dev/mem", O_RDWR | O_SYNC);
+    if (devmem == -1) {
+    	printf("%s",strerror(errno));
+    }
+    XYolov4_tiny_Initialize(&yolov4_tiny, "yolov4_tiny");
 
     char *datacfg = argv[3];
     char *cfg = argv[4];

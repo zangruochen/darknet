@@ -9,6 +9,19 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+extern int devmem;
+extern float * tmp_A;
+extern float * tmp_B;
+extern float * tmp_C;
+
 #ifdef AI2
 #include "xnor_layer.h"
 #endif
@@ -1386,7 +1399,20 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
 
                 }
 
+		/*
+		 * copy A,B,C to phyical mem
+		 */
+		tmp_A = (float*)mmap(0, m*k*4, PORT_READ | PORT_WRITE, MAP_SHARED, devmem, 0x1e000000);
+		tmp_B = (float*)mmap(0, k*n*4, PORT_READ | PORT_WRITE, MAP_SHARED, devmem, 0x20000000);
+		tmp_C = (float*)mmap(0, m*n*4, PORT_READ | PORT_WRITE, MAP_SHARED, devmem, 0x22000000);
+		memcpy(tmp_A, a, m*k*4);
+		memcpy(tmp_B, b, n*k*4);
+		memcpy(tmp_C, c, m*n*4);
+
                 gemm(0, 0, m, n, k, 1, a, k, b, n, 1, c, n);
+		munmap(tmp_A, m*k*4);
+		munmap(tmp_B, n*k*4);
+		munmap(tmp_C, m*n*4);
                 // bit-count to float
             }
             //c += n*m;
