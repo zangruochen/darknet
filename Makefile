@@ -68,14 +68,14 @@ APPNAMESO=uselib
 endif
 
 ifeq ($(USE_CPP), 1)
-CC=g++
+CC=arm-xilinx-linux-gnueabi-g++
 else
-CC=gcc
+CC=arm-xilinx-linux-gnueabi-gcc
 endif
 
-CPP=g++ -std=c++11
+CPP=arm-xilinx-linux-gnueabi-g++ -std=c++11
 NVCC=nvcc
-OPTS=-Ofast
+OPTS=-Ofast -mfloat-abi=hard -mfpu=neon --sysroot=/opt/petalinux/2022.2/sysroots/cortexa9t2hf-neon-xilinx-linux-gnueabi
 LDFLAGS= -lm -pthread
 COMMON= -Iinclude/ -I3rdparty/stb/include
 CFLAGS=-Wall -Wfatal-errors -Wno-unused-result -Wno-unknown-pragmas -fPIC
@@ -158,6 +158,7 @@ OBJ+=convolutional_kernels.o activation_kernels.o im2col_kernels.o col2im_kernel
 endif
 
 OBJS = $(addprefix $(OBJDIR), $(OBJ))
+OBJS += xyolov4_tiny.o xyolov4_tiny_linux.o xyolov4_tiny_sinit.o
 DEPS = $(wildcard src/*.h) Makefile include/darknet.h
 
 all: $(OBJDIR) backup results setchmod $(EXEC) $(LIBNAMESO) $(APPNAMESO)

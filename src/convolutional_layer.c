@@ -1402,12 +1402,13 @@ void forward_convolutional_layer(convolutional_layer l, network_state state)
 		/*
 		 * copy A,B,C to phyical mem
 		 */
-		tmp_A = (float*)mmap(0, m*k*4, PORT_READ | PORT_WRITE, MAP_SHARED, devmem, 0x1e000000);
-		tmp_B = (float*)mmap(0, k*n*4, PORT_READ | PORT_WRITE, MAP_SHARED, devmem, 0x20000000);
-		tmp_C = (float*)mmap(0, m*n*4, PORT_READ | PORT_WRITE, MAP_SHARED, devmem, 0x22000000);
+		tmp_A = (float*)mmap(0, m*k*4, PROT_READ | PROT_WRITE, MAP_SHARED, devmem, 0x1e000000);
+		tmp_B = (float*)mmap(0, k*n*4, PROT_READ | PROT_WRITE, MAP_SHARED, devmem, 0x20000000);
+		tmp_C = (float*)mmap(0, m*n*4, PROT_READ | PROT_WRITE, MAP_SHARED, devmem, 0x22000000);
 		memcpy(tmp_A, a, m*k*4);
 		memcpy(tmp_B, b, n*k*4);
 		memcpy(tmp_C, c, m*n*4);
+		printf("M=%d N=%d K=%d\n",m, n, k);
 
                 gemm(0, 0, m, n, k, 1, a, k, b, n, 1, c, n);
 		munmap(tmp_A, m*k*4);

@@ -24,6 +24,7 @@ extern XYolov4_tiny yolov4_tiny;
 extern float * tmp_A;
 extern float * tmp_B;
 extern float * tmp_C;
+#define USE_FPGA
 
 #if defined(_MSC_VER)
 #if defined(_M_ARM) || defined(_M_ARM64)
@@ -2666,13 +2667,16 @@ void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
     }
     else {
 #ifndef USE_FPGA
+	memcpy(A, tmp_A, M*K*4);
+	memcpy(B, tmp_B, N*K*4);
+	memcpy(C, tmp_C, M*N*4);
         int m, n, k;
         #pragma omp parallel for
         for (m = 0; m < M; ++m) {
             for (k = 0; k < K; ++k) {
-                PUT_IN_REGISTER float A_PART = ALPHA * A[m * K + k];
+                //PUT_IN_REGISTER float A_PART = A[m * K + k];
                 for (n = 0; n < N; ++n) {
-                    C[m * N + n] += A_PART * B[k * N + n];
+                    C[m * N + n] += A[m * K + k] * B[k * N + n];
                 }
             }
         }

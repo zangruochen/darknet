@@ -2051,7 +2051,9 @@ void run_detector(int argc, char **argv)
     if (devmem == -1) {
     	printf("%s",strerror(errno));
     }
-    XYolov4_tiny_Initialize(&yolov4_tiny, "yolov4_tiny");
+    int res;
+    res = XYolov4_tiny_Initialize(&yolov4_tiny, "yolov4_tiny");
+    printf("Init FPGA return %d\n",res);
 
     char *datacfg = argv[3];
     char *cfg = argv[4];
